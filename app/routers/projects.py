@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -150,6 +150,19 @@ def editor_page(project_id: int, request: Request, db: Session = Depends(get_db)
         {
             "request": request,
             "project": project,
+        },
+    )
+
+
+@router.get("/projects/{project_id}/export")
+def export_project(project_id: int, db: Session = Depends(get_db)):
+    project = get_project_or_404(db, project_id)
+    scheme = project_to_schema(project)
+
+    return JSONResponse(
+        content=scheme,
+        headers={
+            "Content-Disposition": f"attachment; filename=project_{project_id}_schema.json"
         },
     )
 
