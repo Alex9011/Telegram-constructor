@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .database import Base, engine
+from .routers import projects
 
 
 def create_app() -> FastAPI:
@@ -14,6 +15,7 @@ def create_app() -> FastAPI:
     app.state.templates = templates
 
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    app.include_router(projects.router)
 
     return app
 
