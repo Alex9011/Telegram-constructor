@@ -1,0 +1,121 @@
+:root {
+    --page-bg-a: #f7f0e4;
+    --page-bg-b: #deebdf;
+    --surface: #ffffff;
+    --surface-soft: #f4f7f5;
+    --text-main: #18242b;
+    --text-muted: #56626a;
+    --accent: #0e7a67;
+    --accent-strong: #085c4d;
+    --border-soft: #d8e2dc;
+}
+
+body {
+    font-family: "Manrope", sans-serif;
+    color: var(--text-main);
+    background:
+        radial-gradient(circle at 20% 10%, #fff3dc 0%, rgba(255, 243, 220, 0) 38%),
+        radial-gradient(circle at 90% 20%, #d6efe3 0%, rgba(214, 239, 227, 0) 35%),
+        linear-gradient(145deg, var(--page-bg-a), var(--page-bg-b));
+    min-height: 100vh;
+}
+
+.app-navbar {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.app-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+}
+
+.btn-primary {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--accent-strong);
+    border-color: var(--accent-strong);
+}
+
+.block-card {
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.block-card .card-header {
+    background: transparent;
+    border-bottom: 1px dashed #cfdad4;
+}
+
+.block-type-badge {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+}
+
+.simulator-chat {
+    min-height: 360px;
+    max-height: 500px;
+    overflow-y: auto;
+    background: #f9fbfa;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.chat-row {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.chat-row.bot {
+    justify-content: flex-start;
+}
+
+.chat-row.user {
+    justify-content: flex-end;
+}
+
+.chat-row.system {
+    justify-content: center;
+}
+
+.chat-bubble {
+    padding: 8px 12px;
+    border-radius: 12px;
+    max-width: 85%;
+    white-space: pre-wrap;
+}
+
+.chat-bubble.bot {
+    background: #e6f3ef;
+    border: 1px solid #c5e1d8;
+}
+
+.chat-bubble.user {
+    background: #dde6ff;
+    border: 1px solid #bdccff;
+}
+
+.chat-bubble.system {
+    background: #fce9d9;
+    border: 1px solid #f4c9ab;
+}
+
+.variables-box {
+    min-height: 180px;
+    max-height: 420px;
+    overflow-y: auto;
+    background: #101a1d;
+    color: #c9ecdd;
+    border-radius: 10px;
+    padding: 12px;
+    margin: 0;
+}
