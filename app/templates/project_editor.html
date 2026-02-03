@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Редактор | {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Редактор проєкту: {{ project.name }}</h1>
+        <div class="text-secondary small">Project ID: {{ project.id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/">До проєктів</a>
+        <a class="btn btn-outline-primary btn-sm" href="/projects/{{ project.id }}/simulator">Відкрити симулятор</a>
+        <a class="btn btn-outline-dark btn-sm" href="/projects/{{ project.id }}/export">Експорт JSON</a>
+        <button id="saveSchemeBtn" class="btn btn-primary btn-sm">Зберегти схему</button>
+    </div>
+</div>
+
+<div id="editorStatus" class="alert d-none" role="alert"></div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-3">
+        <div class="card app-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Додати блок</h2>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary js-add-block" data-type="start">start</button>
+                    <button class="btn btn-outline-primary js-add-block" data-type="message">message</button>
+                    <button class="btn btn-outline-primary js-add-block" data-type="buttons">buttons</button>
+                    <button class="btn btn-outline-primary js-add-block" data-type="input">input</button>
+                    <button class="btn btn-outline-primary js-add-block" data-type="end">end</button>
+                </div>
+                <hr>
+                <p class="small text-secondary mb-0">
+                    Переходи задаються через поле next block.
+                    Для buttons перехід обирається у кожної кнопки.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-9">
+        <div id="blockContainer" class="vstack gap-3"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const PROJECT_ID = Number("{{ project.id }}");
+</script>
+<script src="/static/editor.js"></script>
+{% endblock %}
