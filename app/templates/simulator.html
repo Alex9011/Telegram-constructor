@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Симулятор | {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Симулятор проєкту: {{ project.name }}</h1>
+        <div class="small text-secondary">Project ID: {{ project.id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/">До проєктів</a>
+        <a class="btn btn-outline-primary btn-sm" href="/projects/{{ project.id }}/editor">До редактора</a>
+        <button id="startSimulationBtn" class="btn btn-primary btn-sm">Почати заново</button>
+    </div>
+</div>
+
+<div id="simStatus" class="alert alert-info" role="alert">
+    Натисніть "Почати заново", щоб запустити сценарій зі start блоку.
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card app-card border-0 shadow-sm">
+            <div class="card-body">
+                <div id="chatBox" class="simulator-chat"></div>
+                <div id="simulatorControls" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card app-card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 mb-2">Змінні</h2>
+                <pre id="variablesView" class="variables-box">{}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECT_ID = Number("{{ project.id }}");
+let sessionId = null;
+
+const chatBox = document.getElementById("chatBox");
+const controls = document.getElementById("simulatorControls");
+const variablesView = document.getElementById("variablesView");
+const simStatus = document.getElementById("simStatus");
+const startButton = document.getElementById("startSimulationBtn");
+
+function setStatus(message, type = "info") {
+    simStatus.className = `alert alert-${type}`;
+    simStatus.textContent = message;
+}
+
+function appendMessage(role, text) {
+    const row = document.createElement("div");
+    row.className = `chat-row ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${role}`;
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    chatBox.appendChild(row);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function renderVariables(variables) {
+    variablesView.textContent = JSON.stringify(variables || {}, null, 2);
+}
+
+function extractErrorMessage(payload) {
+    const detail = payload && payload.detail;
+    if (Array.isArray(detail)) {
+        return detail.join("\n");
+    }
+    if (typeof detail === "string") {
+        return detail;
+    }
+    return "Помилка симуляції";
+}
+
+function renderControls(interactiveEvent) {
+    controls.innerHTML = "";
+
+    if (!sessionId || !interactiveEvent) {
+        return;
+    }
+
+    if (interactiveEvent.type === "buttons") {
+        const wrap = document.createElement("div");
+        wrap.className = "d-flex flex-wrap gap-2";
+
+        (interactiveEvent.buttons || []).forEach((button, index) => {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-outline-primary btn-sm";
+            btn.type = "button";
+            btn.textContent = button.label || `Кнопка ${index + 1}`;
+            btn.addEventListener("click", () => {
+                appendMessage("user", button.label || `Кнопка ${index + 1}`);
+                sendStep({ action: "choose", button_index: index });
+            });
+            wrap.appendChild(btn);
+        });
+
+        controls.appendChild(wrap);
+        return;
+    }
+
+    if (interactiveEvent.type === "input") {
+        const form = document.createElement("form");
+        form.className = "d-flex gap-2";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "form-control";
+        input.placeholder = "Введіть текст";
+
+        const btn = document.createElement("button");
+        btn.type = "submit";
+        btn.className = "btn btn-primary";
+        btn.textContent = "Надіслати";
+
+        form.append(input, btn);
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const value = input.value.trim();
+            appendMessage("user", value || "(порожнє введення)");
+            sendStep({ action: "input", input_text: value });
+            input.value = "";
+        });
+
+        controls.appendChild(form);
+    }
+}
+
+function applySimulationResponse(payload) {
+    let interactiveEvent = null;
+
+    for (const event of payload.events || []) {
+        if (event.type === "message") {
+            appendMessage("bot", event.text || "");
+        }
+
+        if (event.type === "buttons") {
+            appendMessage("bot", event.text || "Зробіть вибір");
+            interactiveEvent = event;
+        }
+
+        if (event.type === "input") {
+            appendMessage("bot", event.question || "Введіть текст");
+            interactiveEvent = event;
+        }
+
+        if (event.type === "end") {
+            appendMessage("system", event.text || "Сценарій завершено");
+        }
+
+        if (event.type === "error") {
+            appendMessage("system", event.text || "Помилка");
+        }
+    }
+
+    renderVariables(payload.variables || {});
+
+    if (payload.finished) {
+        sessionId = null;
+        renderControls(null);
+        setStatus("Сценарій завершено.", "success");
+        return;
+    }
+
+    setStatus("Симуляція активна.", "primary");
+    renderControls(interactiveEvent);
+}
+
+async function startSimulation() {
+    try {
+        chatBox.innerHTML = "";
+        controls.innerHTML = "";
+        renderVariables({});
+        sessionId = null;
+
+        const response = await fetch(`/api/simulator/start/${PROJECT_ID}`, {
+            method: "POST",
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            setStatus(extractErrorMessage(payload), "danger");
+            return;
+        }
+
+        sessionId = payload.session_id;
+        applySimulationResponse(payload);
+    } catch (error) {
+        setStatus("Не вдалося запустити симуляцію. Перевірте сервер.", "danger");
+    }
+}
+
+async function sendStep(stepPayload) {
+    if (!sessionId) {
+        setStatus("Сесію вже завершено. Запустіть симуляцію знову.", "warning");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/simulator/step/${sessionId}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(stepPayload),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+            setStatus(extractErrorMessage(payload), "danger");
+            return;
+        }
+
+        applySimulationResponse(payload);
+    } catch (error) {
+        setStatus("Не вдалося виконати крок симуляції. Перевірте сервер.", "danger");
+    }
+}
+
+startButton.addEventListener("click", startSimulation);
+</script>
+{% endblock %}
