@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Telegram | {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Telegram-бот: {{ project.name }}</h1>
+        <div class="text-secondary small">Project ID: {{ project.id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/projects/{{ project.id }}/editor">До редактора</a>
+        <a class="btn btn-outline-primary btn-sm" href="/projects/{{ project.id }}/simulator">До симулятора</a>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if success %}
+<div class="alert alert-success" role="alert">{{ success }}</div>
+{% endif %}
+
+<div class="card app-card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h2 class="h6 mb-3">Швидкий запуск з сайту</h2>
+        <ol class="mb-0 small text-secondary">
+            <li>Вставте токен і натисніть "Зберегти налаштування".</li>
+            <li>Увімкніть бота кнопкою "Увімкнути бота".</li>
+            <li>Натисніть "Запустити polling" нижче.</li>
+            <li>Напишіть боту в Telegram: <strong>/start</strong>.</li>
+        </ol>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-7">
+        <div class="card app-card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Налаштування токена</h2>
+                <form method="post" action="/projects/{{ project.id }}/telegram/save" class="vstack gap-3">
+                    <div>
+                        <label class="form-label">Bot token</label>
+                        <input
+                            class="form-control"
+                            type="text"
+                            name="token"
+                            value="{{ bot_config.token if bot_config else '' }}"
+                            placeholder="123456:ABC..."
+                            required
+                        >
+                    </div>
+
+                    <div class="form-check">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="is_active"
+                            name="is_active"
+                            {% if bot_config and bot_config.is_active %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="is_active">
+                            Увімкнути бота після збереження
+                        </label>
+                    </div>
+
+                    <div>
+                        <button class="btn btn-primary" type="submit">Зберегти налаштування</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+        <div class="card app-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Поточний стан</h2>
+                <div class="small text-secondary mb-2">Username:</div>
+                <div class="mb-3">{{ ('@' + bot_config.bot_username) if (bot_config and bot_config.bot_username) else '—' }}</div>
+
+                <div class="small text-secondary mb-2">Статус:</div>
+                <div class="mb-3">
+                    {% if bot_config and bot_config.is_active %}
+                    <span class="badge text-bg-success">active</span>
+                    {% else %}
+                    <span class="badge text-bg-secondary">inactive</span>
+                    {% endif %}
+                </div>
+
+                <div class="small text-secondary mb-2">Polling runtime:</div>
+                <div class="mb-3">
+                    {% if polling_status.running and polling_status.project_id == project.id %}
+                    <span class="badge text-bg-success">running</span>
+                    {% elif polling_status.running and polling_status.project_id != project.id %}
+                    <span class="badge text-bg-warning">running for another project</span>
+                    {% else %}
+                    <span class="badge text-bg-secondary">stopped</span>
+                    {% endif %}
+                </div>
+
+                {% if polling_status.running and polling_status.project_id == project.id %}
+                <div class="small text-secondary mb-3">
+                    {% if polling_status.bot_username %}@{{ polling_status.bot_username }}{% endif %}
+                </div>
+                {% endif %}
+
+                {% if polling_status.last_error and (not polling_status.running) %}
+                <div class="alert alert-warning py-2 small" role="alert">
+                    Остання помилка polling: {{ polling_status.last_error }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="/projects/{{ project.id }}/telegram/toggle" class="d-flex gap-2">
+                    {% if bot_config and bot_config.is_active %}
+                    <input type="hidden" name="enabled" value="0">
+                    <button class="btn btn-outline-danger" type="submit">Вимкнути бота</button>
+                    {% else %}
+                    <input type="hidden" name="enabled" value="1">
+                    <button class="btn btn-outline-success" type="submit">Увімкнути бота</button>
+                    {% endif %}
+                </form>
+
+                <hr>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="post" action="/projects/{{ project.id }}/telegram/polling/start">
+                        <button
+                            class="btn btn-success"
+                            type="submit"
+                            {% if not bot_config or not bot_config.is_active or (polling_status.running and polling_status.project_id == project.id) %}disabled{% endif %}
+                        >
+                            Запустити polling
+                        </button>
+                    </form>
+
+                    <form method="post" action="/projects/{{ project.id }}/telegram/polling/stop">
+                        <button
+                            class="btn btn-outline-danger"
+                            type="submit"
+                            {% if not polling_status.running or polling_status.project_id != project.id %}disabled{% endif %}
+                        >
+                            Зупинити polling
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
