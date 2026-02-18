@@ -19,29 +19,52 @@ def build_buttons_markup(buttons: List[Dict[str, Any]]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-async def send_flow_events(bot: Bot, chat_id: int, events: List[Dict[str, Any]]) -> None:
+async def send_flow_events(bot: Bot, chat_id: int, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    sent_items: List[Dict[str, Any]] = []
+
     for event in events or []:
         event_type = event.get("type")
 
         if event_type == "message":
-            await bot.send_message(
+            text = _safe_text(event.get("text"), "...")
+            sent = await bot.send_message(
                 chat_id=chat_id,
-                text=_safe_text(event.get("text"), "..."),
+                text=text,
+            )
+            sent_items.append(
+                {
+                    "text": text,
+                    "telegram_message_id": sent.message_id,
+                }
             )
             continue
 
         if event_type == "buttons":
-            await bot.send_message(
+            text = _safe_text(event.get("text"), "Оберіть кнопку")
+            sent = await bot.send_message(
                 chat_id=chat_id,
-                text=_safe_text(event.get("text"), "Оберіть кнопку"),
+                text=text,
                 reply_markup=build_buttons_markup(event.get("buttons") or []),
+            )
+            sent_items.append(
+                {
+                    "text": text,
+                    "telegram_message_id": sent.message_id,
+                }
             )
             continue
 
         if event_type == "input":
-            await bot.send_message(
+            text = _safe_text(event.get("question"), "Введіть текст")
+            sent = await bot.send_message(
                 chat_id=chat_id,
-                text=_safe_text(event.get("question"), "Введіть текст"),
+                text=text,
+            )
+            sent_items.append(
+                {
+                    "text": text,
+                    "telegram_message_id": sent.message_id,
+                }
             )
             continue
 
@@ -50,7 +73,16 @@ async def send_flow_events(bot: Bot, chat_id: int, events: List[Dict[str, Any]])
             continue
 
         if event_type == "error":
-            await bot.send_message(
+            text = "Помилка: " + _safe_text(event.get("text"), "невідома помилка")
+            sent = await bot.send_message(
                 chat_id=chat_id,
-                text="Помилка: " + _safe_text(event.get("text"), "невідома помилка"),
+                text=text,
             )
+            sent_items.append(
+                {
+                    "text": text,
+                    "telegram_message_id": sent.message_id,
+                }
+            )
+
+    return sent_items

@@ -3,13 +3,24 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from ..models import Block, BotSession, Project, TelegramBot
+from ..models import BotSession, Chat, Project, TelegramBot
+from .chat_service import (
+    find_or_create_chat,
+    get_chat_by_db_id,
+    save_incoming_message,
+    save_outgoing_events,
+)
 from .flow_engine import (
     advance_with_action,
     build_block_map,
     find_start_block_id,
     run_automatic_steps,
     validate_blocks,
+)
+
+OUT_OF_SCENARIO_NOTICE_KEY = "__out_of_scenario_notice_sent"
+OUT_OF_SCENARIO_NOTICE_TEXT = (
+    "Повідомлення передано оператору. Щоб почати знову напишіть /start"
 )
 
 
@@ -166,19 +177,53 @@ def _save_state(db: Session, session: BotSession, state: Dict[str, Any]) -> None
     db.commit()
 
 
+def _make_result(
+    events: List[Dict[str, Any]],
+    finished: bool,
+    chat: Chat,
+) -> Dict[str, Any]:
+    return {
+        "events": events,
+        "finished": finished,
+        "chat_db_id": chat.id,
+        "is_human_mode": chat.is_human_mode,
+    }
+
+
 def start_for_user(
     db: Session,
     telegram_bot_id: int,
     telegram_user_id: int,
     chat_id: int,
-) -> Tuple[List[Dict[str, Any]], bool]:
+    username: Optional[str] = None,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    incoming_text: str = "/start",
+    telegram_message_id: Optional[int] = None,
+) -> Dict[str, Any]:
     _, blocks, block_map = _load_runtime_context(db, telegram_bot_id)
 
     start_block_id = find_start_block_id(blocks)
     if not start_block_id:
         raise ValueError("У схемі не знайдено блок start")
 
+    chat = find_or_create_chat(
+        db=db,
+        telegram_bot_id=telegram_bot_id,
+        telegram_user_id=telegram_user_id,
+        telegram_chat_id=chat_id,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+    )
+    if incoming_text:
+        save_incoming_message(db=db, chat=chat, text=incoming_text, telegram_message_id=telegram_message_id)
+
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
+
+    if chat.is_human_mode:
+        return _make_result(events=[], finished=False, chat=chat)
+
     state = {
         "current_block_id": start_block_id,
         "waiting": None,
@@ -187,7 +232,7 @@ def start_for_user(
 
     events, finished = run_automatic_steps(blocks, state, block_map=block_map)
     _save_state(db, session, state)
-    return events, finished
+    return _make_result(events=events, finished=finished, chat=chat)
 
 
 def continue_with_text(
@@ -196,20 +241,46 @@ def continue_with_text(
     telegram_user_id: int,
     chat_id: int,
     text: str,
-) -> Tuple[List[Dict[str, Any]], bool]:
+    username: Optional[str] = None,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    telegram_message_id: Optional[int] = None,
+) -> Dict[str, Any]:
     _, blocks, block_map = _load_runtime_context(db, telegram_bot_id)
+
+    chat = find_or_create_chat(
+        db=db,
+        telegram_bot_id=telegram_bot_id,
+        telegram_user_id=telegram_user_id,
+        telegram_chat_id=chat_id,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+    )
+    save_incoming_message(db=db, chat=chat, text=text, telegram_message_id=telegram_message_id)
+
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
     state = _session_to_state(session)
 
+    if chat.is_human_mode:
+        return _make_result(events=[], finished=False, chat=chat)
+
     if not state.get("current_block_id") and not state.get("waiting"):
-        events = [
-            {
-                "type": "message",
-                "text": "Сценарій завершено. Надішліть /start, щоб почати знову.",
-            }
-        ]
+        variables = state.setdefault("variables", {})
+        already_notified = bool(variables.get(OUT_OF_SCENARIO_NOTICE_KEY))
+
+        events = []
+        if not already_notified:
+            events = [
+                {
+                    "type": "message",
+                    "text": OUT_OF_SCENARIO_NOTICE_TEXT,
+                }
+            ]
+            variables[OUT_OF_SCENARIO_NOTICE_KEY] = True
+
         _save_state(db, session, state)
-        return events, True
+        return _make_result(events=events, finished=True, chat=chat)
 
     waiting = state.get("waiting")
     if waiting == "buttons":
@@ -232,7 +303,7 @@ def continue_with_text(
         events, finished = run_automatic_steps(blocks, state, block_map=block_map)
 
     _save_state(db, session, state)
-    return events, finished
+    return _make_result(events=events, finished=finished, chat=chat)
 
 
 def continue_with_button(
@@ -241,25 +312,43 @@ def continue_with_button(
     telegram_user_id: int,
     chat_id: int,
     button_index: int,
-) -> Tuple[List[Dict[str, Any]], bool]:
+    username: Optional[str] = None,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    callback_query_id: Optional[str] = None,
+) -> Dict[str, Any]:
     _, blocks, block_map = _load_runtime_context(db, telegram_bot_id)
+
+    chat = find_or_create_chat(
+        db=db,
+        telegram_bot_id=telegram_bot_id,
+        telegram_user_id=telegram_user_id,
+        telegram_chat_id=chat_id,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+    )
+    save_incoming_message(
+        db=db,
+        chat=chat,
+        text=f"[button:{button_index}]",
+        telegram_message_id=None,
+    )
+
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
     state = _session_to_state(session)
 
+    if chat.is_human_mode:
+        return _make_result(events=[], finished=False, chat=chat)
+
     if not state.get("current_block_id") and not state.get("waiting"):
-        events = [
-            {
-                "type": "message",
-                "text": "Сценарій завершено. Надішліть /start, щоб почати знову.",
-            }
-        ]
         _save_state(db, session, state)
-        return events, True
+        return _make_result(events=[], finished=True, chat=chat)
 
     if state.get("waiting") != "buttons":
         events = [{"type": "message", "text": "Зараз не очікується натискання кнопки."}]
         _save_state(db, session, state)
-        return events, False
+        return _make_result(events=events, finished=False, chat=chat)
 
     events, finished = advance_with_action(
         blocks,
@@ -270,4 +359,11 @@ def continue_with_button(
     )
 
     _save_state(db, session, state)
-    return events, finished
+    return _make_result(events=events, finished=finished, chat=chat)
+
+
+def save_sent_flow_events(db: Session, chat_db_id: int, sent_items: List[Dict[str, Any]]) -> None:
+    chat = get_chat_by_db_id(db, chat_db_id)
+    if not chat:
+        return
+    save_outgoing_events(db=db, chat=chat, sent_items=sent_items)

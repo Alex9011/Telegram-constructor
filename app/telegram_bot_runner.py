@@ -13,6 +13,7 @@ from .services.telegram_runtime import (
     continue_with_button,
     continue_with_text,
     get_active_telegram_bot,
+    save_sent_flow_events,
     start_for_user,
 )
 
@@ -52,11 +53,16 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
 
         db = SessionLocal()
         try:
-            events, _ = start_for_user(
+            result = start_for_user(
                 db=db,
                 telegram_bot_id=telegram_bot_id,
                 telegram_user_id=message.from_user.id,
                 chat_id=message.chat.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+                incoming_text=message.text or "/start",
+                telegram_message_id=message.message_id,
             )
         except Exception as exc:
             await bot.send_message(message.chat.id, f"Помилка запуску: {exc}")
@@ -64,7 +70,22 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
         finally:
             db.close()
 
-        await send_flow_events(bot=bot, chat_id=message.chat.id, events=events)
+        sent_items = await send_flow_events(
+            bot=bot,
+            chat_id=message.chat.id,
+            events=result["events"],
+        )
+
+        if result.get("chat_db_id") and sent_items:
+            db = SessionLocal()
+            try:
+                save_sent_flow_events(
+                    db=db,
+                    chat_db_id=result["chat_db_id"],
+                    sent_items=sent_items,
+                )
+            finally:
+                db.close()
 
     @dp.callback_query(F.data.startswith("choose:"))
     async def on_choose(callback: CallbackQuery, bot: Bot):
@@ -80,12 +101,16 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
 
         db = SessionLocal()
         try:
-            events, _ = continue_with_button(
+            result = continue_with_button(
                 db=db,
                 telegram_bot_id=telegram_bot_id,
                 telegram_user_id=callback.from_user.id,
                 chat_id=callback.message.chat.id,
                 button_index=button_index,
+                username=callback.from_user.username,
+                first_name=callback.from_user.first_name,
+                last_name=callback.from_user.last_name,
+                callback_query_id=callback.id,
             )
         except Exception as exc:
             await callback.answer("Помилка", show_alert=False)
@@ -94,8 +119,27 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
         finally:
             db.close()
 
+        if result.get("is_human_mode"):
+            await callback.answer("Діалог у режимі оператора", show_alert=False)
+            return
+
         await callback.answer()
-        await send_flow_events(bot=bot, chat_id=callback.message.chat.id, events=events)
+        sent_items = await send_flow_events(
+            bot=bot,
+            chat_id=callback.message.chat.id,
+            events=result["events"],
+        )
+
+        if result.get("chat_db_id") and sent_items:
+            db = SessionLocal()
+            try:
+                save_sent_flow_events(
+                    db=db,
+                    chat_db_id=result["chat_db_id"],
+                    sent_items=sent_items,
+                )
+            finally:
+                db.close()
 
     @dp.message(F.text)
     async def on_text(message: Message, bot: Bot):
@@ -104,12 +148,16 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
 
         db = SessionLocal()
         try:
-            events, _ = continue_with_text(
+            result = continue_with_text(
                 db=db,
                 telegram_bot_id=telegram_bot_id,
                 telegram_user_id=message.from_user.id,
                 chat_id=message.chat.id,
                 text=message.text or "",
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+                telegram_message_id=message.message_id,
             )
         except Exception as exc:
             await bot.send_message(message.chat.id, f"Помилка: {exc}")
@@ -117,7 +165,25 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
         finally:
             db.close()
 
-        await send_flow_events(bot=bot, chat_id=message.chat.id, events=events)
+        if result.get("is_human_mode"):
+            return
+
+        sent_items = await send_flow_events(
+            bot=bot,
+            chat_id=message.chat.id,
+            events=result["events"],
+        )
+
+        if result.get("chat_db_id") and sent_items:
+            db = SessionLocal()
+            try:
+                save_sent_flow_events(
+                    db=db,
+                    chat_db_id=result["chat_db_id"],
+                    sent_items=sent_items,
+                )
+            finally:
+                db.close()
 
     return dp
 
