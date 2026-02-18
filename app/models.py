@@ -91,6 +91,11 @@ class TelegramBot(Base):
         back_populates="telegram_bot",
         cascade="all, delete-orphan",
     )
+    chats = relationship(
+        "Chat",
+        back_populates="telegram_bot",
+        cascade="all, delete-orphan",
+    )
 
 
 class BotSession(Base):
@@ -124,3 +129,60 @@ class BotSession(Base):
     )
 
     telegram_bot = relationship("TelegramBot", back_populates="sessions")
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+    __table_args__ = (
+        UniqueConstraint("telegram_bot_id", "chat_id", name="uq_bot_telegram_chat"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    telegram_bot_id = Column(
+        Integer,
+        ForeignKey("telegram_bots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    telegram_user_id = Column(String(32), nullable=False, index=True)
+    chat_id = Column(String(32), nullable=False, index=True)
+    username = Column(String(255), nullable=True)
+    full_name = Column(String(255), nullable=True)
+    status = Column(String(32), nullable=False, default="open")
+    is_human_mode = Column(Boolean, nullable=False, default=False)
+    unread_count = Column(Integer, nullable=False, default=0)
+    last_message_text = Column(Text, nullable=True)
+    last_message_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    telegram_bot = relationship("TelegramBot", back_populates="chats")
+    messages = relationship(
+        "Message",
+        back_populates="chat",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at.asc()",
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(
+        Integer,
+        ForeignKey("chats.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    direction = Column(String(8), nullable=False)
+    text = Column(Text, nullable=False)
+    telegram_message_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    chat = relationship("Chat", back_populates="messages")
