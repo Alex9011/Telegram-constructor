@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Чат #{{ chat.id }} | Оператор{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Діалог з {{ chat.full_name or ('ID ' + chat.telegram_user_id) }}</h1>
+        <div class="small text-secondary">@{{ chat.username or '—' }} | Telegram chat_id: {{ chat.chat_id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/admin/chats">До списку чатів</a>
+        {% if chat.telegram_bot %}
+        <a class="btn btn-outline-primary btn-sm" href="/projects/{{ chat.telegram_bot.project_id }}/telegram">Налаштування бота</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if notice %}
+<div class="alert alert-success" role="alert">{{ notice }}</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card app-card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="simulator-chat" style="min-height: 420px; max-height: 620px;">
+                    {% for message in messages %}
+                    <div class="chat-row {% if message.direction == 'in' %}user{% else %}bot{% endif %}">
+                        <div class="chat-bubble {% if message.direction == 'in' %}user{% else %}bot{% endif %}">
+                            <div class="small text-secondary mb-1">
+                                {% if message.direction == 'in' %}Користувач{% else %}Оператор/Бот{% endif %}
+                                · {{ message.created_at.strftime('%d.%m.%Y %H:%M:%S') }}
+                            </div>
+                            <div>{{ message.text }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not messages %}
+                    <div class="text-secondary">Історія порожня.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card app-card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Режим діалогу</h2>
+                <div class="mb-3">
+                    {% if chat.is_human_mode %}
+                    <span class="badge text-bg-warning">human mode</span>
+                    <div class="small text-secondary mt-2">Сценарій бота не відповідає автоматично.</div>
+                    {% else %}
+                    <span class="badge text-bg-success">bot mode</span>
+                    <div class="small text-secondary mt-2">Відповідає flow_engine за схемою.</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    {% if chat.is_human_mode %}
+                    <form method="post" action="/admin/chats/{{ chat.id }}/release">
+                        <button class="btn btn-outline-success" type="submit">Вернуть боту</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="/admin/chats/{{ chat.id }}/take">
+                        <button class="btn btn-warning" type="submit">Взять диалог</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card app-card border-0 shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Ручна відповідь</h2>
+                <form method="post" action="/admin/chats/{{ chat.id }}/send" class="vstack gap-2">
+                    <textarea class="form-control" rows="4" name="text" placeholder="Введіть повідомлення для користувача" required></textarea>
+                    <button class="btn btn-primary" type="submit">Відправити</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

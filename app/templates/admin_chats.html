@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Операторська панель | Чати{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Операторська панель: чати</h1>
+        <div class="small text-secondary">Всі діалоги користувачів з ботом</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/">До проєктів</a>
+    </div>
+</div>
+
+<div class="card app-card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if chats %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Користувач</th>
+                        <th>Проєкт</th>
+                        <th>Останнє повідомлення</th>
+                        <th>Час</th>
+                        <th>Режим</th>
+                        <th>Непрочитані</th>
+                        <th class="pe-3">Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for chat in chats %}
+                    <tr>
+                        <td class="ps-3">
+                            <div class="fw-semibold">{{ chat.full_name or ('ID ' + chat.telegram_user_id) }}</div>
+                            <div class="small text-secondary">@{{ chat.username or '—' }}</div>
+                        </td>
+                        <td>
+                            <div class="small">Project {{ chat.telegram_bot.project_id if chat.telegram_bot else '—' }}</div>
+                            <div class="small text-secondary">chat_id: {{ chat.chat_id }}</div>
+                        </td>
+                        <td>
+                            <div class="small text-truncate" style="max-width: 280px;">{{ chat.last_message_text or '—' }}</div>
+                        </td>
+                        <td>
+                            <div class="small">{{ chat.last_message_at.strftime('%d.%m.%Y %H:%M') if chat.last_message_at else '—' }}</div>
+                        </td>
+                        <td>
+                            {% if chat.is_human_mode %}
+                            <span class="badge text-bg-warning">human mode</span>
+                            {% else %}
+                            <span class="badge text-bg-success">bot mode</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if chat.unread_count %}
+                            <span class="badge text-bg-primary">{{ chat.unread_count }}</span>
+                            {% else %}
+                            <span class="text-secondary small">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-3">
+                            <a class="btn btn-sm btn-primary" href="/admin/chats/{{ chat.id }}">Відкрити</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-secondary">Поки немає діалогів.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

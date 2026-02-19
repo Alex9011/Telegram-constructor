@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .database import Base, engine
-from .routers import projects, simulator, telegram_admin
+from .routers import admin_chats, projects, simulator, telegram_admin
 from .services.telegram_polling_manager import stop_polling
 
 
@@ -19,6 +19,7 @@ def create_app() -> FastAPI:
     app.include_router(projects.router)
     app.include_router(simulator.router)
     app.include_router(telegram_admin.router)
+    app.include_router(admin_chats.router)
 
     @app.on_event("shutdown")
     def on_shutdown() -> None:
