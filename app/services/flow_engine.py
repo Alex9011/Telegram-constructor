@@ -80,6 +80,13 @@ def interpolate_text(template: Any, variables: Dict[str, Any]) -> str:
         return template
 
 
+def _extract_meta(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    meta = data.get("meta")
+    if isinstance(meta, dict):
+        return meta
+    return None
+
+
 def find_start_block_id(blocks: List[Dict[str, Any]]) -> Optional[str]:
     for block in blocks:
         if block.get("type") == "start":
@@ -143,12 +150,14 @@ def run_automatic_steps(
             continue
 
         if block_type == "message":
-            events.append(
-                {
-                    "type": "message",
-                    "text": interpolate_text(data.get("text", ""), variables),
-                }
-            )
+            event = {
+                "type": "message",
+                "text": interpolate_text(data.get("text", ""), variables),
+            }
+            meta = _extract_meta(data)
+            if meta is not None:
+                event["meta"] = meta
+            events.append(event)
             state["current_block_id"] = data.get("next_block_id")
             hops += 1
             continue
@@ -165,27 +174,31 @@ def run_automatic_steps(
                     }
                 )
 
-            events.append(
-                {
-                    "type": "buttons",
-                    "text": interpolate_text(data.get("text", "Оберіть кнопку"), variables),
-                    "buttons": buttons,
-                }
-            )
+            event = {
+                "type": "buttons",
+                "text": interpolate_text(data.get("text", "Оберіть кнопку"), variables),
+                "buttons": buttons,
+            }
+            meta = _extract_meta(data)
+            if meta is not None:
+                event["meta"] = meta
+            events.append(event)
             state["waiting"] = "buttons"
             return events, False
 
         if block_type == "input":
-            events.append(
-                {
-                    "type": "input",
-                    "question": interpolate_text(
-                        data.get("question", "Введіть текст"),
-                        variables,
-                    ),
-                    "variable_name": data.get("variable_name", "user_input"),
-                }
-            )
+            event = {
+                "type": "input",
+                "question": interpolate_text(
+                    data.get("question", "Введіть текст"),
+                    variables,
+                ),
+                "variable_name": data.get("variable_name", "user_input"),
+            }
+            meta = _extract_meta(data)
+            if meta is not None:
+                event["meta"] = meta
+            events.append(event)
             state["waiting"] = "input"
             return events, False
 
@@ -235,7 +248,15 @@ def advance_with_action(
         if button_index is None or button_index < 0 or button_index >= len(buttons):
             return [{"type": "error", "text": "Некоректний індекс кнопки."}], False
 
-        next_block_id = (buttons[button_index] or {}).get("next_block_id")
+        selected_button = buttons[button_index] or {}
+        variable_name = str(selected_button.get("set_variable_name") or "").strip()
+        if variable_name:
+            variable_value = selected_button.get("set_variable_value")
+            if variable_value is None:
+                variable_value = selected_button.get("label", "")
+            state.setdefault("variables", {})[variable_name] = variable_value
+
+        next_block_id = selected_button.get("next_block_id")
         state["current_block_id"] = next_block_id
         state["waiting"] = None
         return run_automatic_steps(blocks, state, block_map=block_map)

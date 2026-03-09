@@ -70,6 +70,9 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
         finally:
             db.close()
 
+        if result.get("is_blocked"):
+            return
+
         sent_items = await send_flow_events(
             bot=bot,
             chat_id=message.chat.id,
@@ -119,6 +122,10 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
         finally:
             db.close()
 
+        if result.get("is_blocked"):
+            await callback.answer("Користувача заблоковано", show_alert=False)
+            return
+
         if result.get("is_human_mode"):
             await callback.answer("Діалог у режимі оператора", show_alert=False)
             return
@@ -164,6 +171,9 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
             return
         finally:
             db.close()
+
+        if result.get("is_blocked"):
+            return
 
         if result.get("is_human_mode"):
             return

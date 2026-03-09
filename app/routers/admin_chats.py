@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -7,15 +7,62 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..services.chat_service import (
+    block_chat_user,
+    clear_chat_history,
     get_chat_by_db_id,
+    get_chat_session_variables,
     get_chat_with_messages,
+    is_chat_blocked,
     list_chats,
     mark_chat_read,
     switch_human_mode,
+    unblock_chat_user,
 )
 from ..services.operator_sender import send_operator_message
 
 router = APIRouter()
+
+VARIABLE_LABELS: Dict[str, str] = {
+    "client_name": "Ім'я клієнта",
+    "client_phone": "Телефон",
+    "selected_service": "Обрана послуга",
+    "selected_barber": "Обраний барбер",
+    "booking_date": "Дата",
+    "booking_time": "Час",
+    "comment": "Коментар",
+    "booking_request_id": "ID заявки",
+}
+
+
+def _build_variable_items(variables: Dict[str, Any]) -> List[Dict[str, str]]:
+    preferred_order = [
+        "client_name",
+        "client_phone",
+        "selected_service",
+        "selected_barber",
+        "booking_date",
+        "booking_time",
+        "comment",
+        "booking_request_id",
+    ]
+
+    items: List[Dict[str, str]] = []
+    seen = set()
+
+    for key in preferred_order:
+        if key not in variables:
+            continue
+        value = str(variables.get(key) or "").strip() or "—"
+        items.append({"key": key, "label": VARIABLE_LABELS.get(key, key), "value": value})
+        seen.add(key)
+
+    for key in sorted(variables.keys()):
+        if key in seen:
+            continue
+        value = str(variables.get(key) or "").strip() or "—"
+        items.append({"key": key, "label": VARIABLE_LABELS.get(key, key), "value": value})
+
+    return items
 
 
 def _redirect_to_chat(chat_db_id: int, notice: Optional[str] = None, error: Optional[str] = None):
@@ -62,6 +109,7 @@ def admin_chat_detail_page(chat_id: int, request: Request, db: Session = Depends
 
     notice = request.query_params.get("notice")
     error = request.query_params.get("error")
+    session_variables = get_chat_session_variables(db, chat)
 
     templates = request.app.state.templates
     return templates.TemplateResponse(
@@ -70,6 +118,7 @@ def admin_chat_detail_page(chat_id: int, request: Request, db: Session = Depends
             "request": request,
             "chat": chat,
             "messages": chat_data["messages"],
+            "chat_variable_items": _build_variable_items(session_variables),
             "notice": notice,
             "error": error,
         },
@@ -81,6 +130,8 @@ async def admin_send_message(chat_id: int, text: str = Form(...), db: Session = 
     chat = get_chat_by_db_id(db, chat_db_id=chat_id)
     if not chat:
         return RedirectResponse(url="/admin/chats", status_code=303)
+    if is_chat_blocked(chat):
+        return _redirect_to_chat(chat_id, error="Користувача заблоковано. Спочатку розблокуйте його")
 
     text_value = (text or "").strip()
     if not text_value:
@@ -99,6 +150,8 @@ def admin_take_chat(chat_id: int, db: Session = Depends(get_db)):
     chat = get_chat_by_db_id(db, chat_db_id=chat_id)
     if not chat:
         return RedirectResponse(url="/admin/chats", status_code=303)
+    if is_chat_blocked(chat):
+        return _redirect_to_chat(chat_id, error="Спочатку розблокуйте користувача")
 
     switch_human_mode(db, chat, enabled=True)
     return _redirect_to_chat(chat_id, notice="Діалог передано оператору")
@@ -109,6 +162,42 @@ def admin_release_chat(chat_id: int, db: Session = Depends(get_db)):
     chat = get_chat_by_db_id(db, chat_db_id=chat_id)
     if not chat:
         return RedirectResponse(url="/admin/chats", status_code=303)
+    if is_chat_blocked(chat):
+        return _redirect_to_chat(chat_id, error="Користувача заблоковано")
 
     switch_human_mode(db, chat, enabled=False)
     return _redirect_to_chat(chat_id, notice="Діалог повернуто боту")
+
+
+@router.post("/admin/chats/{chat_id}/clear-history")
+def admin_clear_chat_history(chat_id: int, db: Session = Depends(get_db)):
+    chat = get_chat_by_db_id(db, chat_db_id=chat_id)
+    if not chat:
+        return RedirectResponse(url="/admin/chats", status_code=303)
+
+    try:
+        clear_chat_history(db, chat)
+    except Exception as exc:
+        return _redirect_to_chat(chat_id, error=f"Не вдалося очистити історію: {exc}")
+
+    return _redirect_to_chat(chat_id, notice="Історію чату очищено")
+
+
+@router.post("/admin/chats/{chat_id}/block")
+def admin_block_user(chat_id: int, db: Session = Depends(get_db)):
+    chat = get_chat_by_db_id(db, chat_db_id=chat_id)
+    if not chat:
+        return RedirectResponse(url="/admin/chats", status_code=303)
+
+    block_chat_user(db, chat)
+    return _redirect_to_chat(chat_id, notice="Користувача заблоковано")
+
+
+@router.post("/admin/chats/{chat_id}/unblock")
+def admin_unblock_user(chat_id: int, db: Session = Depends(get_db)):
+    chat = get_chat_by_db_id(db, chat_db_id=chat_id)
+    if not chat:
+        return RedirectResponse(url="/admin/chats", status_code=303)
+
+    unblock_chat_user(db, chat)
+    return _redirect_to_chat(chat_id, notice="Користувача розблоковано")

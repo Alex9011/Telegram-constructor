@@ -4,9 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from ..models import BotSession, Chat, Project, TelegramBot
+from .booking_requests import create_booking_request_from_chat
 from .chat_service import (
     find_or_create_chat,
     get_chat_by_db_id,
+    is_chat_blocked,
     save_incoming_message,
     save_outgoing_events,
 )
@@ -22,6 +24,7 @@ OUT_OF_SCENARIO_NOTICE_KEY = "__out_of_scenario_notice_sent"
 OUT_OF_SCENARIO_NOTICE_TEXT = (
     "Повідомлення передано оператору. Щоб почати знову напишіть /start"
 )
+SAVE_BOOKING_ACTION = "save_booking_request"
 
 
 def parse_block_data(data_json: str) -> Dict[str, Any]:
@@ -187,7 +190,44 @@ def _make_result(
         "finished": finished,
         "chat_db_id": chat.id,
         "is_human_mode": chat.is_human_mode,
+        "is_blocked": is_chat_blocked(chat),
     }
+
+
+def _process_event_actions(
+    db: Session,
+    chat: Chat,
+    state: Dict[str, Any],
+    events: List[Dict[str, Any]],
+) -> None:
+    variables = state.setdefault("variables", {})
+
+    for event in list(events or []):
+        if not isinstance(event, dict):
+            continue
+
+        meta = event.get("meta")
+        if not isinstance(meta, dict):
+            continue
+
+        action = str(meta.get("action") or "").strip()
+        if action != SAVE_BOOKING_ACTION:
+            continue
+
+        if variables.get("__booking_saved"):
+            continue
+
+        try:
+            booking = create_booking_request_from_chat(db=db, chat=chat, variables=variables)
+            variables["booking_request_id"] = str(booking.id)
+            variables["__booking_saved"] = True
+        except Exception:
+            events.append(
+                {
+                    "type": "message",
+                    "text": "Заявку не вдалося зберегти в CRM. Адміністратор зв'яжеться з вами вручну.",
+                }
+            )
 
 
 def start_for_user(
@@ -219,6 +259,9 @@ def start_for_user(
     if incoming_text:
         save_incoming_message(db=db, chat=chat, text=incoming_text, telegram_message_id=telegram_message_id)
 
+    if is_chat_blocked(chat):
+        return _make_result(events=[], finished=False, chat=chat)
+
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
 
     if chat.is_human_mode:
@@ -231,6 +274,7 @@ def start_for_user(
     }
 
     events, finished = run_automatic_steps(blocks, state, block_map=block_map)
+    _process_event_actions(db=db, chat=chat, state=state, events=events)
     _save_state(db, session, state)
     return _make_result(events=events, finished=finished, chat=chat)
 
@@ -258,6 +302,9 @@ def continue_with_text(
         last_name=last_name,
     )
     save_incoming_message(db=db, chat=chat, text=text, telegram_message_id=telegram_message_id)
+
+    if is_chat_blocked(chat):
+        return _make_result(events=[], finished=False, chat=chat)
 
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
     state = _session_to_state(session)
@@ -302,6 +349,7 @@ def continue_with_text(
     else:
         events, finished = run_automatic_steps(blocks, state, block_map=block_map)
 
+    _process_event_actions(db=db, chat=chat, state=state, events=events)
     _save_state(db, session, state)
     return _make_result(events=events, finished=finished, chat=chat)
 
@@ -335,6 +383,9 @@ def continue_with_button(
         telegram_message_id=None,
     )
 
+    if is_chat_blocked(chat):
+        return _make_result(events=[], finished=False, chat=chat)
+
     session = _get_or_create_session(db, telegram_bot_id, telegram_user_id, chat_id)
     state = _session_to_state(session)
 
@@ -358,6 +409,7 @@ def continue_with_button(
         block_map=block_map,
     )
 
+    _process_event_actions(db=db, chat=chat, state=state, events=events)
     _save_state(db, session, state)
     return _make_result(events=events, finished=finished, chat=chat)
 

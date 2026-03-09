@@ -3,6 +3,14 @@
 {% block title %}Проєкти | Telegram Bot Constructor{% endblock %}
 
 {% block content %}
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if notice %}
+<div class="alert alert-success" role="alert">{{ notice }}</div>
+{% endif %}
+
 <div class="row g-4 align-items-start">
     <div class="col-12 col-lg-5">
         <div class="card app-card shadow-sm border-0">
@@ -21,6 +29,26 @@
                 <p class="small text-secondary mt-3 mb-0">
                     Після створення відкриється редактор зі стартовим блоком.
                 </p>
+
+                <hr>
+
+                <h2 class="h6 mb-3">Імпорт проєкту з JSON</h2>
+                <form method="post" action="/projects/import-json" enctype="multipart/form-data" class="vstack gap-2">
+                    <input
+                        type="file"
+                        name="file"
+                        class="form-control"
+                        accept=".json,application/json"
+                        required
+                    >
+                    <input
+                        type="text"
+                        name="name"
+                        class="form-control"
+                        placeholder="Назва проєкту (необов'язково)"
+                    >
+                    <button class="btn btn-outline-primary" type="submit">Завантажити .json</button>
+                </form>
             </div>
         </div>
     </div>

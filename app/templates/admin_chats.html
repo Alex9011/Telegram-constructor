@@ -47,7 +47,9 @@
                             <div class="small">{{ chat.last_message_at.strftime('%d.%m.%Y %H:%M') if chat.last_message_at else '—' }}</div>
                         </td>
                         <td>
-                            {% if chat.is_human_mode %}
+                            {% if chat.status == 'blocked' %}
+                            <span class="badge text-bg-danger">blocked</span>
+                            {% elif chat.is_human_mode %}
                             <span class="badge text-bg-warning">human mode</span>
                             {% else %}
                             <span class="badge text-bg-success">bot mode</span>

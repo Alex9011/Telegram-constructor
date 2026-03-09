@@ -5,6 +5,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -38,6 +39,16 @@ class Project(Base):
         "TelegramBot",
         back_populates="project",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+    booking_requests = relationship(
+        "BookingRequest",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    broadcast_campaigns = relationship(
+        "BroadcastCampaign",
+        back_populates="project",
         cascade="all, delete-orphan",
     )
 
@@ -186,3 +197,62 @@ class Message(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     chat = relationship("Chat", back_populates="messages")
+
+
+class BookingRequest(Base):
+    __tablename__ = "booking_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    telegram_user_id = Column(String(32), nullable=False, index=True)
+    client_name = Column(String(255), nullable=False)
+    client_phone = Column(String(64), nullable=False)
+    selected_service = Column(String(255), nullable=False)
+    selected_barber = Column(String(255), nullable=False)
+    booking_date = Column(String(64), nullable=False)
+    booking_time = Column(String(64), nullable=False)
+    comment = Column(Text, nullable=True)
+    status = Column(String(32), nullable=False, default="new")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    project = relationship("Project", back_populates="booking_requests")
+
+
+class BroadcastCampaign(Base):
+    __tablename__ = "broadcast_campaigns"
+    __table_args__ = (
+        Index("ix_broadcast_campaigns_project_active", "project_id", "is_active"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title = Column(String(150), nullable=False)
+    message_text = Column(Text, nullable=False)
+    schedule_type = Column(String(20), nullable=False, default="daily")
+    day_of_week = Column(Integer, nullable=True)
+    day_of_month = Column(Integer, nullable=True)
+    hour = Column(Integer, nullable=False, default=10)
+    minute = Column(Integer, nullable=False, default=0)
+    interval_days = Column(Integer, nullable=True)
+    timezone = Column(String(64), nullable=False, default="Europe/Kiev")
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    last_run_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    project = relationship("Project", back_populates="broadcast_campaigns")

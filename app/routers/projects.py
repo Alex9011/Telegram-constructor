@@ -1,7 +1,8 @@
 import json
 from typing import Any, Dict, List
+from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -9,8 +10,48 @@ from ..database import get_db
 from ..models import Block, Project
 from ..schemas import BlockPayload, FlowSaveRequest
 from ..services.flow_engine import validate_blocks
+from ..services.project_templates import create_barbershop_template, ensure_barbershop_demo_project
 
 router = APIRouter()
+
+
+def _redirect_to_index_with_message(key: str, message: str) -> RedirectResponse:
+    return RedirectResponse(url=f"/?{key}={quote_plus(message)}", status_code=303)
+
+
+def _normalize_import_blocks(raw_blocks: Any) -> List[Dict[str, Any]]:
+    if not isinstance(raw_blocks, list) or not raw_blocks:
+        raise ValueError("У JSON має бути непорожній список blocks")
+
+    blocks: List[Dict[str, Any]] = []
+    for index, item in enumerate(raw_blocks, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Блок #{index}: некоректний формат")
+
+        uid = str(item.get("uid") or "").strip()
+        block_type = str(item.get("type") or "").strip()
+        data = item.get("data") if item.get("data") is not None else {}
+
+        if not uid:
+            raise ValueError(f"Блок #{index}: відсутній uid")
+        if not block_type:
+            raise ValueError(f"Блок {uid}: відсутній type")
+        if not isinstance(data, dict):
+            raise ValueError(f"Блок {uid}: поле data має бути об'єктом")
+
+        blocks.append(
+            {
+                "uid": uid,
+                "type": block_type,
+                "data": data,
+            }
+        )
+
+    errors = validate_blocks(blocks)
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    return blocks
 
 
 def get_project_or_404(db: Session, project_id: int) -> Project:
@@ -86,13 +127,18 @@ def payload_to_block(payload: BlockPayload) -> Dict[str, Any]:
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
+    ensure_barbershop_demo_project(db)
     projects = db.query(Project).order_by(Project.created_at.desc()).all()
+    notice = request.query_params.get("notice")
+    error = request.query_params.get("error")
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "projects": projects,
+            "notice": notice,
+            "error": error,
         },
     )
 
@@ -129,6 +175,61 @@ def create_project(name: str = Form(...), db: Session = Depends(get_db)):
 
     db.add(project)
     db.commit()
+
+    return RedirectResponse(url=f"/projects/{project.id}/editor", status_code=303)
+
+
+@router.post("/projects/create-barbershop-demo")
+def create_barbershop_demo_project(db: Session = Depends(get_db)):
+    try:
+        project = create_barbershop_template(db)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return RedirectResponse(url=f"/projects/{project.id}/editor", status_code=303)
+
+
+@router.post("/projects/import-json")
+async def import_project_json(
+    file: UploadFile = File(...),
+    name: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    filename = (file.filename or "").strip()
+    if not filename:
+        return _redirect_to_index_with_message("error", "Оберіть JSON-файл для імпорту")
+    if not filename.lower().endswith(".json"):
+        return _redirect_to_index_with_message("error", "Підтримуються лише файли .json")
+
+    raw_bytes = await file.read()
+    if not raw_bytes:
+        return _redirect_to_index_with_message("error", "Файл порожній")
+
+    try:
+        payload_text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return _redirect_to_index_with_message("error", "Файл має бути в UTF-8")
+
+    try:
+        payload = json.loads(payload_text)
+    except json.JSONDecodeError:
+        return _redirect_to_index_with_message("error", "Некоректний JSON-файл")
+
+    if not isinstance(payload, dict):
+        return _redirect_to_index_with_message("error", "Корінь JSON має бути об'єктом")
+
+    try:
+        blocks = _normalize_import_blocks(payload.get("blocks"))
+    except ValueError as exc:
+        return _redirect_to_index_with_message("error", f"Помилка схеми: {exc}")
+
+    imported_name = str(payload.get("name") or "").strip()
+    project_name = (name or "").strip() or imported_name or "Імпортований бот"
+
+    project = Project(name=project_name)
+    db.add(project)
+    db.flush()
+    persist_schema(db, project, blocks)
 
     return RedirectResponse(url=f"/projects/{project.id}/editor", status_code=303)
 

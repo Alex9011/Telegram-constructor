@@ -1,9 +1,10 @@
 from datetime import datetime
+import json
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from ..models import Chat, Message, TelegramBot
+from ..models import BotSession, Chat, Message, TelegramBot
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -180,9 +181,75 @@ def switch_human_mode(db: Session, chat: Chat, enabled: bool) -> Chat:
     return chat
 
 
+def is_chat_blocked(chat: Chat) -> bool:
+    return (chat.status or "").strip().lower() == "blocked"
+
+
+def block_chat_user(db: Session, chat: Chat) -> Chat:
+    chat.is_human_mode = False
+    chat.status = "blocked"
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
+def unblock_chat_user(db: Session, chat: Chat) -> Chat:
+    chat.status = "bot"
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
 def mark_chat_read(db: Session, chat: Chat) -> Chat:
     chat.unread_count = 0
     db.add(chat)
     db.commit()
     db.refresh(chat)
     return chat
+
+
+def clear_chat_history(db: Session, chat: Chat) -> Chat:
+    db.query(Message).filter(Message.chat_id == chat.id).delete(synchronize_session=False)
+
+    chat.unread_count = 0
+    chat.last_message_text = None
+    chat.last_message_at = None
+    db.add(chat)
+
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
+def get_chat_session_variables(db: Session, chat: Chat) -> Dict[str, Any]:
+    session = (
+        db.query(BotSession)
+        .filter(
+            BotSession.telegram_bot_id == chat.telegram_bot_id,
+            BotSession.telegram_user_id == chat.telegram_user_id,
+            BotSession.chat_id == chat.chat_id,
+        )
+        .order_by(BotSession.updated_at.desc(), BotSession.id.desc())
+        .first()
+    )
+    if not session:
+        return {}
+
+    try:
+        payload = json.loads(session.variables_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+    if not isinstance(payload, dict):
+        return {}
+
+    cleaned: Dict[str, Any] = {}
+    for key, value in payload.items():
+        name = str(key or "").strip()
+        if not name or name.startswith("__"):
+            continue
+        cleaned[name] = value
+
+    return cleaned

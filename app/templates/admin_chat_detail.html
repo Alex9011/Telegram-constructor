@@ -51,9 +51,30 @@
     <div class="col-12 col-lg-4">
         <div class="card app-card border-0 shadow-sm mb-4">
             <div class="card-body">
+                <h2 class="h6 mb-3">Дані користувача</h2>
+                {% if chat_variable_items %}
+                <div class="vstack gap-2">
+                    {% for item in chat_variable_items %}
+                    <div>
+                        <div class="small text-secondary">{{ item.label }}</div>
+                        <div class="fw-semibold" style="word-break: break-word;">{{ item.value }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-secondary small">Поки що немає збережених змінних для цього діалогу.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card app-card border-0 shadow-sm mb-4">
+            <div class="card-body">
                 <h2 class="h6 mb-3">Режим діалогу</h2>
                 <div class="mb-3">
-                    {% if chat.is_human_mode %}
+                    {% if chat.status == 'blocked' %}
+                    <span class="badge text-bg-danger">blocked</span>
+                    <div class="small text-secondary mt-2">Користувача заблоковано. Бот і оператор не відповідають.</div>
+                    {% elif chat.is_human_mode %}
                     <span class="badge text-bg-warning">human mode</span>
                     <div class="small text-secondary mt-2">Сценарій бота не відповідає автоматично.</div>
                     {% else %}
@@ -63,15 +84,27 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    {% if chat.is_human_mode %}
+                    {% if chat.status == 'blocked' %}
+                    <form method="post" action="/admin/chats/{{ chat.id }}/unblock">
+                        <button class="btn btn-outline-success" type="submit">Розблокувати користувача</button>
+                    </form>
+                    {% elif chat.is_human_mode %}
                     <form method="post" action="/admin/chats/{{ chat.id }}/release">
-                        <button class="btn btn-outline-success" type="submit">Вернуть боту</button>
+                        <button class="btn btn-outline-success" type="submit">Повернути боту</button>
                     </form>
                     {% else %}
                     <form method="post" action="/admin/chats/{{ chat.id }}/take">
-                        <button class="btn btn-warning" type="submit">Взять диалог</button>
+                        <button class="btn btn-warning" type="submit">Взяти діалог</button>
                     </form>
                     {% endif %}
+                    {% if chat.status != 'blocked' %}
+                    <form method="post" action="/admin/chats/{{ chat.id }}/block" onsubmit="return confirm('Заблокувати користувача? Він більше не зможе взаємодіяти з ботом.');">
+                        <button class="btn btn-outline-danger" type="submit">Заблокувати користувача</button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="/admin/chats/{{ chat.id }}/clear-history" onsubmit="return confirm('Очистити всю історію повідомлень у цьому чаті?');">
+                        <button class="btn btn-outline-danger" type="submit">Очистити історію</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -80,9 +113,12 @@
             <div class="card-body">
                 <h2 class="h6 mb-3">Ручна відповідь</h2>
                 <form method="post" action="/admin/chats/{{ chat.id }}/send" class="vstack gap-2">
-                    <textarea class="form-control" rows="4" name="text" placeholder="Введіть повідомлення для користувача" required></textarea>
-                    <button class="btn btn-primary" type="submit">Відправити</button>
+                    <textarea class="form-control" rows="4" name="text" placeholder="Введіть повідомлення для користувача" {% if chat.status == 'blocked' %}disabled{% else %}required{% endif %}></textarea>
+                    <button class="btn btn-primary" type="submit" {% if chat.status == 'blocked' %}disabled{% endif %}>Відправити</button>
                 </form>
+                {% if chat.status == 'blocked' %}
+                <div class="small text-secondary mt-2">Щоб знову відповідати користувачу, спочатку розблокуйте його.</div>
+                {% endif %}
             </div>
         </div>
     </div>

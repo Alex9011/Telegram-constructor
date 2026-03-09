@@ -1,0 +1,552 @@
+{
+  "name": "Демо: OldBoy Style (Барбершоп)",
+  "blocks": [
+    {
+      "uid": "start",
+      "type": "start",
+      "data": {
+        "next_block_id": "msg_welcome"
+      }
+    },
+    {
+      "uid": "msg_welcome",
+      "type": "message",
+      "data": {
+        "text": "Ласкаво просимо до барбершопу OldBoy Style. Оберіть потрібний розділ у меню нижче.",
+        "next_block_id": "menu_main"
+      }
+    },
+    {
+      "uid": "menu_main",
+      "type": "buttons",
+      "data": {
+        "text": "Головне меню:",
+        "buttons": [
+          {
+            "label": "Записатися",
+            "next_block_id": "booking_name"
+          },
+          {
+            "label": "Послуги та ціни",
+            "next_block_id": "services_menu"
+          },
+          {
+            "label": "Барбери",
+            "next_block_id": "barbers_menu"
+          },
+          {
+            "label": "Адреса та графік",
+            "next_block_id": "address_info"
+          },
+          {
+            "label": "Контакти",
+            "next_block_id": "contacts_info"
+          },
+          {
+            "label": "Часті питання",
+            "next_block_id": "faq_menu"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "booking_name",
+      "type": "input",
+      "data": {
+        "question": "Як вас звати?",
+        "variable_name": "client_name",
+        "next_block_id": "booking_phone"
+      }
+    },
+    {
+      "uid": "booking_phone",
+      "type": "input",
+      "data": {
+        "question": "Вкажіть номер телефону для підтвердження запису:",
+        "variable_name": "client_phone",
+        "next_block_id": "booking_service"
+      }
+    },
+    {
+      "uid": "booking_service",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть послугу:",
+        "buttons": [
+          {
+            "label": "Чоловіча стрижка — 500 грн",
+            "next_block_id": "booking_choose_barber",
+            "set_variable_name": "selected_service",
+            "set_variable_value": "Чоловіча стрижка — 500 грн"
+          },
+          {
+            "label": "Стрижка + борода — 800 грн",
+            "next_block_id": "booking_choose_barber",
+            "set_variable_name": "selected_service",
+            "set_variable_value": "Стрижка + борода — 800 грн"
+          },
+          {
+            "label": "Оформлення бороди — 350 грн",
+            "next_block_id": "booking_choose_barber",
+            "set_variable_name": "selected_service",
+            "set_variable_value": "Оформлення бороди — 350 грн"
+          },
+          {
+            "label": "Дитяча стрижка — 400 грн",
+            "next_block_id": "booking_choose_barber",
+            "set_variable_name": "selected_service",
+            "set_variable_value": "Дитяча стрижка — 400 грн"
+          },
+          {
+            "label": "Назад у меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "booking_choose_barber",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть барбера:",
+        "buttons": [
+          {
+            "label": "Барбер Олекс",
+            "next_block_id": "booking_date",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Олекс"
+          },
+          {
+            "label": "Барбер Максим",
+            "next_block_id": "booking_date",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Максим"
+          },
+          {
+            "label": "Барбер Денис",
+            "next_block_id": "booking_date",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Денис"
+          },
+          {
+            "label": "Назад до послуг",
+            "next_block_id": "booking_service"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "booking_date",
+      "type": "input",
+      "data": {
+        "question": "Вкажіть зручну дату (наприклад 25.03.2026):",
+        "variable_name": "booking_date",
+        "next_block_id": "booking_time"
+      }
+    },
+    {
+      "uid": "booking_time",
+      "type": "input",
+      "data": {
+        "question": "Вкажіть зручний час (наприклад 15:30):",
+        "variable_name": "booking_time",
+        "next_block_id": "booking_comment"
+      }
+    },
+    {
+      "uid": "booking_comment",
+      "type": "input",
+      "data": {
+        "question": "Коментар до запису (або напишіть: без коментаря):",
+        "variable_name": "comment",
+        "next_block_id": "booking_summary"
+      }
+    },
+    {
+      "uid": "booking_summary",
+      "type": "message",
+      "data": {
+        "text": "Підсумок заявки:\n\nІм'я: {client_name}\nТелефон: {client_phone}\nПослуга: {selected_service}\nБарбер: {selected_barber}\nДата: {booking_date}\nЧас: {booking_time}\nКоментар: {comment}",
+        "next_block_id": "booking_confirm"
+      }
+    },
+    {
+      "uid": "booking_confirm",
+      "type": "buttons",
+      "data": {
+        "text": "Підтвердити запис?",
+        "buttons": [
+          {
+            "label": "Підтвердити",
+            "next_block_id": "booking_thanks"
+          },
+          {
+            "label": "Змінити",
+            "next_block_id": "booking_name"
+          },
+          {
+            "label": "Скасувати",
+            "next_block_id": "booking_cancel"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "booking_thanks",
+      "type": "message",
+      "data": {
+        "text": "Дякуємо, ваша заявка прийнята. Наш адміністратор зв'яжеться з вами найближчим часом.",
+        "meta": {
+          "action": "save_booking_request"
+        },
+        "next_block_id": "booking_end"
+      }
+    },
+    {
+      "uid": "booking_cancel",
+      "type": "message",
+      "data": {
+        "text": "Запис скасовано. Якщо передумаєте, поверніться в меню і почніть знову.",
+        "next_block_id": "booking_end"
+      }
+    },
+    {
+      "uid": "booking_end",
+      "type": "end",
+      "data": {}
+    },
+    {
+      "uid": "services_menu",
+      "type": "buttons",
+      "data": {
+        "text": "Послуги та ціни:",
+        "buttons": [
+          {
+            "label": "Чоловіча стрижка",
+            "next_block_id": "service_mens"
+          },
+          {
+            "label": "Стрижка + борода",
+            "next_block_id": "service_combo"
+          },
+          {
+            "label": "Оформлення бороди",
+            "next_block_id": "service_beard"
+          },
+          {
+            "label": "Дитяча стрижка",
+            "next_block_id": "service_kids"
+          },
+          {
+            "label": "Назад у меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "service_mens",
+      "type": "message",
+      "data": {
+        "text": "Чоловіча стрижка — 500 грн. Класична або сучасна форма, консультація перед початком.",
+        "next_block_id": "services_actions"
+      }
+    },
+    {
+      "uid": "service_combo",
+      "type": "message",
+      "data": {
+        "text": "Стрижка + борода — 800 грн. Комплексний догляд та стиль в одному візиті.",
+        "next_block_id": "services_actions"
+      }
+    },
+    {
+      "uid": "service_beard",
+      "type": "message",
+      "data": {
+        "text": "Оформлення бороди — 350 грн. Охайний контур, форма та поради щодо догляду.",
+        "next_block_id": "services_actions"
+      }
+    },
+    {
+      "uid": "service_kids",
+      "type": "message",
+      "data": {
+        "text": "Дитяча стрижка — 400 грн. Дбайливий підхід до маленьких гостей.",
+        "next_block_id": "services_actions"
+      }
+    },
+    {
+      "uid": "services_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Що далі?",
+        "buttons": [
+          {
+            "label": "Записатися",
+            "next_block_id": "booking_name"
+          },
+          {
+            "label": "Назад до послуг",
+            "next_block_id": "services_menu"
+          },
+          {
+            "label": "Головне меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "barbers_menu",
+      "type": "buttons",
+      "data": {
+        "text": "Наші барбери:",
+        "buttons": [
+          {
+            "label": "Барбер Олекс",
+            "next_block_id": "barber_alex"
+          },
+          {
+            "label": "Барбер Максим",
+            "next_block_id": "barber_maxim"
+          },
+          {
+            "label": "Барбер Денис",
+            "next_block_id": "barber_denis"
+          },
+          {
+            "label": "Назад у меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "barber_alex",
+      "type": "message",
+      "data": {
+        "text": "Барбер Олекс: 5 років досвіду. Спеціалізація: класичні та fade-стрижки. Працює швидко й акуратно.",
+        "next_block_id": "barber_alex_actions"
+      }
+    },
+    {
+      "uid": "barber_maxim",
+      "type": "message",
+      "data": {
+        "text": "Барбер Максим: 3 роки досвіду. Спеціалізація: борода та сучасні стилі. Допоможе підібрати образ.",
+        "next_block_id": "barber_maxim_actions"
+      }
+    },
+    {
+      "uid": "barber_denis",
+      "type": "message",
+      "data": {
+        "text": "Барбер Денис: 6 років досвіду. Спеціалізація: точні форми та premium service.",
+        "next_block_id": "barber_denis_actions"
+      }
+    },
+    {
+      "uid": "barber_alex_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть дію:",
+        "buttons": [
+          {
+            "label": "Записатися до цього барбера",
+            "next_block_id": "booking_name",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Олекс"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "barbers_menu"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "barber_maxim_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть дію:",
+        "buttons": [
+          {
+            "label": "Записатися до цього барбера",
+            "next_block_id": "booking_name",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Максим"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "barbers_menu"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "barber_denis_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть дію:",
+        "buttons": [
+          {
+            "label": "Записатися до цього барбера",
+            "next_block_id": "booking_name",
+            "set_variable_name": "selected_barber",
+            "set_variable_value": "Барбер Денис"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "barbers_menu"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "address_info",
+      "type": "message",
+      "data": {
+        "text": "Адреса: м. Київ, вул. Саксаганського, 25.\nГрафік: щодня з 10:00 до 21:00.",
+        "next_block_id": "address_actions"
+      }
+    },
+    {
+      "uid": "address_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Додаткова інформація:",
+        "buttons": [
+          {
+            "label": "Як дістатися",
+            "next_block_id": "address_route"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "address_route",
+      "type": "message",
+      "data": {
+        "text": "Орієнтир: 7 хвилин пішки від м. Площа Українських Героїв. Вхід з фасаду, 1-й поверх.",
+        "next_block_id": "address_route_actions"
+      }
+    },
+    {
+      "uid": "address_route_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Повернутися:",
+        "buttons": [
+          {
+            "label": "Назад до адреси",
+            "next_block_id": "address_info"
+          },
+          {
+            "label": "Головне меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "contacts_info",
+      "type": "message",
+      "data": {
+        "text": "Телефон: +380 67 123 45 67\nInstagram: @oldboystyle\nTelegram: @oldboystyle_support",
+        "next_block_id": "contacts_actions"
+      }
+    },
+    {
+      "uid": "contacts_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Оберіть дію:",
+        "buttons": [
+          {
+            "label": "Записатися",
+            "next_block_id": "booking_name"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "faq_menu",
+      "type": "buttons",
+      "data": {
+        "text": "Часті запитання:",
+        "buttons": [
+          {
+            "label": "Чи потрібно записуватися заздалегідь?",
+            "next_block_id": "faq_q1"
+          },
+          {
+            "label": "Чи можна прийти з дитиною?",
+            "next_block_id": "faq_q2"
+          },
+          {
+            "label": "Чи можна оплатити карткою?",
+            "next_block_id": "faq_q3"
+          },
+          {
+            "label": "Назад",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    },
+    {
+      "uid": "faq_q1",
+      "type": "message",
+      "data": {
+        "text": "Так, рекомендуємо записуватись заздалегідь, щоб обрати зручний час і майстра.",
+        "next_block_id": "faq_actions"
+      }
+    },
+    {
+      "uid": "faq_q2",
+      "type": "message",
+      "data": {
+        "text": "Так, ми робимо дитячі стрижки. Для дітей у нас спокійний та дружній підхід.",
+        "next_block_id": "faq_actions"
+      }
+    },
+    {
+      "uid": "faq_q3",
+      "type": "message",
+      "data": {
+        "text": "Так, можна оплатити готівкою або банківською карткою.",
+        "next_block_id": "faq_actions"
+      }
+    },
+    {
+      "uid": "faq_actions",
+      "type": "buttons",
+      "data": {
+        "text": "Що далі?",
+        "buttons": [
+          {
+            "label": "Ще питання",
+            "next_block_id": "faq_menu"
+          },
+          {
+            "label": "Записатися",
+            "next_block_id": "booking_name"
+          },
+          {
+            "label": "Головне меню",
+            "next_block_id": "menu_main"
+          }
+        ]
+      }
+    }
+  ]
+}
