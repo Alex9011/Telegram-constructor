@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">{{ page_title }}</h1>
+        <div class="small text-secondary">Project ID: {{ project.id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/projects/{{ project.id }}/broadcasts">До списку розсилок</a>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<div class="card app-card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ action_url }}" class="vstack gap-3">
+            <div>
+                <label class="form-label">Назва розсилки</label>
+                <input class="form-control" type="text" name="title" value="{{ form_values.title }}" required>
+            </div>
+
+            <div>
+                <label class="form-label">Текст повідомлення</label>
+                <textarea class="form-control" name="message_text" rows="5" required>{{ form_values.message_text }}</textarea>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Тип розкладу</label>
+                    <select class="form-select" name="schedule_type" required>
+                        {% for option in schedule_options %}
+                        <option value="{{ option.value }}" {% if form_values.schedule_type == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Година (0-23)</label>
+                    <input class="form-control" type="number" min="0" max="23" name="hour" value="{{ form_values.hour }}" required>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Хвилина (0-59)</label>
+                    <input class="form-control" type="number" min="0" max="59" name="minute" value="{{ form_values.minute }}" required>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label">День тижня (для weekly)</label>
+                    <select class="form-select" name="day_of_week">
+                        <option value="">—</option>
+                        {% for day_number, day_label in day_names.items() %}
+                        <option value="{{ day_number }}" {% if form_values.day_of_week|string == day_number|string %}selected{% endif %}>{{ day_number }} — {{ day_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label">День місяця (для monthly)</label>
+                    <input class="form-control" type="number" min="1" max="31" name="day_of_month" value="{{ form_values.day_of_month }}">
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Інтервал днів (для interval)</label>
+                    <input class="form-control" type="number" min="1" name="interval_days" value="{{ form_values.interval_days }}">
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-8">
+                    <label class="form-label">Timezone</label>
+                    <input class="form-control" type="text" name="timezone" value="{{ form_values.timezone }}" placeholder="Europe/Kiev або UTC" required>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if form_values.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">Розсилка активна</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 pt-2">
+                <button class="btn btn-primary" type="submit">Зберегти</button>
+                <a class="btn btn-outline-secondary" href="/projects/{{ project.id }}/broadcasts">Скасувати</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

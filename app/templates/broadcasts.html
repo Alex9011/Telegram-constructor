@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Розсилки | {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1">Розсилки: {{ project.name }}</h1>
+        <div class="small text-secondary">Project ID: {{ project.id }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/projects/{{ project.id }}/editor">До редактора</a>
+        <a class="btn btn-primary btn-sm" href="/projects/{{ project.id }}/broadcasts/new">Нова розсилка</a>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if notice %}
+<div class="alert alert-success" role="alert">{{ notice }}</div>
+{% endif %}
+
+<div class="card app-card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if campaigns %}
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Назва</th>
+                        <th>Розклад</th>
+                        <th>Стан</th>
+                        <th>Останній запуск</th>
+                        <th class="pe-3">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for campaign in campaigns %}
+                    <tr>
+                        <td class="ps-3">
+                            <div class="fw-semibold">{{ campaign.title }}</div>
+                            <div class="small text-secondary text-truncate" style="max-width: 320px;">{{ campaign.message_text }}</div>
+                        </td>
+                        <td>
+                            <div class="small">{{ schedule_text[campaign.id] }}</div>
+                        </td>
+                        <td>
+                            {% if campaign.is_active %}
+                            <span class="badge text-bg-success">active</span>
+                            {% else %}
+                            <span class="badge text-bg-secondary">inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">{{ campaign.last_run_at.strftime('%d.%m.%Y %H:%M') if campaign.last_run_at else '—' }}</div>
+                        </td>
+                        <td class="pe-3">
+                            <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                <a class="btn btn-sm btn-outline-primary" href="/broadcasts/{{ campaign.id }}/edit">Редагувати</a>
+                                <form method="post" action="/broadcasts/{{ campaign.id }}/toggle">
+                                    <button class="btn btn-sm btn-outline-warning" type="submit">
+                                        {% if campaign.is_active %}Вимкнути{% else %}Увімкнути{% endif %}
+                                    </button>
+                                </form>
+                                <form method="post" action="/broadcasts/{{ campaign.id }}/delete" onsubmit="return confirm('Видалити розсилку?');">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Видалити</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-secondary">Поки що немає розсилок для цього проєкту.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
