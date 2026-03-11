@@ -15,26 +15,40 @@
 ## Вимоги
 
 - Python 3.9+
-- Windows PowerShell або CMD
+- Windows PowerShell, CMD або Git Bash
 
 ## Встановлення та запуск
 
 1. Перейди до папки проєкту:
 
    ```powershell
-   cd C:\Users\1\OneDrive\Desktop\Telegram-constructor
+   cd C:\Users\1\OneDrive\Desktop\testi\Telegram-constructor
    ```
 
 2. Створи віртуальне оточення (якщо ще не створено):
 
    ```powershell
-   python -m venv .venv
+   py -3.9 -m venv .venv
    ```
 
 3. Активуй віртуальне оточення:
 
+   Git Bash:
+
+   ```bash
+   source .venv/Scripts/activate
+   ```
+
+   PowerShell:
+
    ```powershell
-   .venv\Scripts\activate
+   .venv\Scripts\Activate.ps1
+   ```
+
+   CMD:
+
+   ```cmd
+   .venv\Scripts\activate.bat
    ```
 
 4. Встанови залежності:

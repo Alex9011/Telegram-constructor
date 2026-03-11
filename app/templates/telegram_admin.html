@@ -101,6 +101,10 @@
                     {% endif %}
                 </div>
 
+                {% if polling_status.status_message %}
+                <div class="small text-secondary mb-3">Polling status: {{ polling_status.status_message }}</div>
+                {% endif %}
+
                 {% if polling_status.running and polling_status.project_id == project.id %}
                 <div class="small text-secondary mb-3">
                     {% if polling_status.bot_username %}@{{ polling_status.bot_username }}{% endif %}
