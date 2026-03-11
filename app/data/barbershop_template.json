@@ -111,10 +111,10 @@
         "text": "Оберіть барбера:",
         "buttons": [
           {
-            "label": "Барбер Олекс",
+            "label": "Барбер Алекс",
             "next_block_id": "booking_date",
             "set_variable_name": "selected_barber",
-            "set_variable_value": "Барбер Олекс"
+            "set_variable_value": "Барбер Алекс"
           },
           {
             "label": "Барбер Максим",
@@ -304,7 +304,7 @@
         "text": "Наші барбери:",
         "buttons": [
           {
-            "label": "Барбер Олекс",
+            "label": "Барбер Алекс",
             "next_block_id": "barber_alex"
           },
           {
@@ -326,7 +326,7 @@
       "uid": "barber_alex",
       "type": "message",
       "data": {
-        "text": "Барбер Олекс: 5 років досвіду. Спеціалізація: класичні та fade-стрижки. Працює швидко й акуратно.",
+        "text": "Барбер Алекс: 5 років досвіду. Спеціалізація: класичні та fade-стрижки. Працює швидко й акуратно.",
         "next_block_id": "barber_alex_actions"
       }
     },
@@ -356,7 +356,7 @@
             "label": "Записатися до цього барбера",
             "next_block_id": "booking_name",
             "set_variable_name": "selected_barber",
-            "set_variable_value": "Барбер Олекс"
+            "set_variable_value": "Барбер Алекс"
           },
           {
             "label": "Назад",
