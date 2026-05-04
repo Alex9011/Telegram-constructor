@@ -93,6 +93,8 @@ class TelegramBot(Base):
     )
     token = Column(Text, nullable=False)
     bot_username = Column(String(255), nullable=True)
+    web_app_url = Column(Text, nullable=True)
+    web_app_button_text = Column(String(255), nullable=True)
     is_active = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

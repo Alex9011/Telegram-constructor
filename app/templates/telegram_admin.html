@@ -53,6 +53,28 @@
                         >
                     </div>
 
+                    <div>
+                        <label class="form-label">Web App URL</label>
+                        <input
+                            class="form-control"
+                            type="text"
+                            name="web_app_url"
+                            value="{{ bot_config.web_app_url if bot_config else '' }}"
+                            placeholder="https://example.com"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="form-label">Web App Button Text</label>
+                        <input
+                            class="form-control"
+                            type="text"
+                            name="web_app_button_text"
+                            value="{{ bot_config.web_app_button_text if bot_config else '' }}"
+                            placeholder="📊 Відкрити FinanceFlow"
+                        >
+                    </div>
+
                     <div class="form-check">
                         <input
                             class="form-check-input"

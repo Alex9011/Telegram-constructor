@@ -1,10 +1,17 @@
 import argparse
 import asyncio
+import json
 from typing import Optional
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    WebAppInfo,
+)
 
 from .database import SessionLocal
 from .models import TelegramBot
@@ -89,6 +96,68 @@ def build_dispatcher(telegram_bot_id: int) -> Dispatcher:
                 )
             finally:
                 db.close()
+
+        db = SessionLocal()
+        try:
+            bot_config = db.query(TelegramBot).filter(TelegramBot.id == telegram_bot_id).first()
+        finally:
+            db.close()
+
+        if bot_config and bot_config.web_app_url:
+            button_text = bot_config.web_app_button_text or "📊 Відкрити FinanceFlow"
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=button_text,
+                            web_app=WebAppInfo(url=bot_config.web_app_url),
+                        )
+                    ]
+                ]
+            )
+            await message.answer(
+                "Відкрити застосунок:",
+                reply_markup=keyboard,
+            )
+
+    @dp.message(F.web_app_data)
+    async def on_web_app_data(message: Message):
+        db = SessionLocal()
+        try:
+            bot_config = db.query(TelegramBot).filter(TelegramBot.id == telegram_bot_id).first()
+        finally:
+            db.close()
+
+        if not bot_config or not bot_config.web_app_url:
+            return
+
+        if not message.web_app_data:
+            await message.answer("Не вдалося обробити дані з Web App")
+            return
+
+        raw_data = message.web_app_data.data
+        try:
+            payload = json.loads(raw_data)
+        except Exception:
+            await message.answer("Не вдалося обробити дані з Web App")
+            return
+
+        name = payload.get("name")
+        price = payload.get("price")
+        entry_type = payload.get("type")
+
+        if not name or price is None or not entry_type:
+            await message.answer("Не вдалося обробити дані з Web App")
+            return
+
+        type_label = "Доход" if entry_type == "income" else "Витрата"
+
+        await message.answer(
+            "✅ Транзакцію збережено!\n"
+            f"Тип: {type_label}\n"
+            f"Назва: {name}\n"
+            f"Сума: {price} UAH"
+        )
 
     @dp.callback_query(F.data.startswith("choose:"))
     async def on_choose(callback: CallbackQuery, bot: Bot):

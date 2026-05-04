@@ -90,6 +90,8 @@ async def telegram_settings_save(
     request: Request,
     token: str = Form(...),
     is_active: Optional[str] = Form(None),
+    web_app_url: Optional[str] = Form(None),
+    web_app_button_text: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -118,12 +120,17 @@ async def telegram_settings_save(
             error="Не вдалося перевірити токен через Telegram API",
         )
 
+    url_value = (web_app_url or "").strip() or None
+    button_text_value = (web_app_button_text or "").strip() or None
+
     upsert_project_bot(
         db=db,
         project_id=project_id,
         token=token_value,
         is_active=is_active == "on",
         bot_username=username,
+        web_app_url=url_value,
+        web_app_button_text=button_text_value,
     )
     return RedirectResponse(url=f"/projects/{project_id}/telegram?saved=1", status_code=303)
 

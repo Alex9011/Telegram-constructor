@@ -45,6 +45,8 @@ def upsert_project_bot(
     token: str,
     is_active: bool,
     bot_username: Optional[str],
+    web_app_url: Optional[str] = None,
+    web_app_button_text: Optional[str] = None,
 ) -> TelegramBot:
     bot = get_project_bot(db, project_id)
     if not bot:
@@ -53,11 +55,15 @@ def upsert_project_bot(
             token=token,
             is_active=is_active,
             bot_username=bot_username,
+            web_app_url=web_app_url,
+            web_app_button_text=web_app_button_text,
         )
     else:
         bot.token = token
         bot.is_active = is_active
         bot.bot_username = bot_username
+        bot.web_app_url = web_app_url
+        bot.web_app_button_text = web_app_button_text
 
     db.add(bot)
     db.commit()
